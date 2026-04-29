@@ -3,11 +3,10 @@ use actix_web::{web, HttpRequest, HttpResponse};
 use actix_web_actors::ws;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 use crate::db::Database;
-use crate::models::{Message, PresenceStatus};
+use crate::models::PresenceStatus;
 
 // ============================================================================
 // WEBSOCKET MESSAGE TYPES
@@ -86,7 +85,6 @@ impl Actor for WsSession {
     type Context = ws::WebsocketContext<Self>;
 
     fn started(&mut self, ctx: &mut Self::Context) {
-        // Notify server that a new session has connected
         self.addr.send(Connect {
             addr: ctx.address(),
             profile_id: self.profile_id,
@@ -100,7 +98,6 @@ impl Actor for WsSession {
     }
 
     fn stopped(&mut self, ctx: &mut Self::Context) {
-        // Notify server that a session has disconnected
         for target in &self.subscriptions {
             self.addr.send(Unsubscribe {
                 addr: ctx.address(),
@@ -134,9 +131,7 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
             Ok(ws::Message::Ping(msg)) => {
                 ctx.pong(&msg);
             }
-            Ok(ws::Message::Pong(_)) => {
-                // Keep alive
-            }
+            Ok(ws::Message::Pong(_)) => {}
             Ok(ws::Message::Text(text)) => {
                 if let Ok(ws_msg) = serde_json::from_str::<WsMessage>(&text) {
                     self.handle_ws_message(ws_msg, ctx);
@@ -241,10 +236,10 @@ impl Handler<BroadcastMessage> for WsSession {
 // ============================================================================
 
 pub struct ChatServer {
-    sessions: HashMap<Uuid, HashSet<Addr<WsSession>>>, // profile_id -> sessions
-    channel_subscribers: HashMap<Uuid, HashSet<Addr<WsSession>>>, // channel_id -> sessions
-    conversation_subscribers: HashMap<Uuid, HashSet<Addr<WsSession>>>, // conversation_id -> sessions
-    workspace_subscribers: HashMap<Uuid, HashSet<Addr<WsSession>>>, // workspace_id -> sessions
+    sessions: HashMap<Uuid, HashSet<Addr<WsSession>>>,
+    channel_subscribers: HashMap<Uuid, HashSet<Addr<WsSession>>>,
+    conversation_subscribers: HashMap<Uuid, HashSet<Addr<WsSession>>>,
+    workspace_subscribers: HashMap<Uuid, HashSet<Addr<WsSession>>>,
     db: Database,
 }
 
@@ -370,7 +365,6 @@ impl Handler<Disconnect> for ChatServer {
             }
         }
 
-        // Remove from all subscriptions
         for subscribers in self.channel_subscribers.values_mut() {
             subscribers.remove(&msg.addr);
         }
@@ -450,7 +444,6 @@ impl Handler<NewMessage> for ChatServer {
         let profile_id = msg.profile_id;
         let data = msg.data.clone();
 
-        // Save message to database asynchronously
         async move {
             use crate::messages::MessageService;
             use crate::models::MessageType;
@@ -486,7 +479,6 @@ impl Handler<NewMessage> for ChatServer {
                     timestamp: chrono::Utc::now(),
                 };
 
-                // Broadcast to appropriate target
                 if let Some(channel_id) = message.channel_id {
                     act.broadcast_to_channel(channel_id, broadcast);
                 } else if let Some(conversation_id) = message.conversation_id {
@@ -514,9 +506,6 @@ impl Handler<UpdatePresence> for ChatServer {
         .into_actor(self)
         .map(|res, act, _ctx| {
             if let Ok(profile) = res {
-                // Broadcast presence update to all workspaces the user is a member of
-                // This would require fetching user's workspaces from DB
-                // For now, we'll broadcast to all subscribers
                 let broadcast = BroadcastMessage {
                     r#type: "presence".to_string(),
                     data: serde_json::to_value(&profile).unwrap(),
@@ -547,7 +536,6 @@ impl Handler<Typing> for ChatServer {
             timestamp: chrono::Utc::now(),
         };
 
-        // Broadcast typing indicator to all channels/conversations the user is subscribed to
         for subscribers in self.channel_subscribers.values() {
             for addr in subscribers {
                 addr.do_send(broadcast.clone());

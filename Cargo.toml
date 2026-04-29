@@ -7,10 +7,9 @@ edition = "2021"
 # Web framework
 actix-web = "4.4"
 actix-cors = "0.7"
-actix-ws = "0.4"
 
 # Database
-sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json", "migrate"] }
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "sqlite", "uuid", "chrono", "json", "migrate"] }
 
 # Async runtime
 tokio = { version = "1.35", features = ["full"] }
@@ -47,5 +46,27 @@ thiserror = "1.0"
 # HTTP client (for external services)
 reqwest = { version = "0.11", features = ["json"] }
 
+# Global state management
+lazy_static = "1.4"
+
 # Async traits
 async-trait = "0.1"
+
+# Redis
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+
+[[bin]]
+name = "test_supabase"
+path = "bins/test_supabase.rs"
+
+[[bin]]
+name = "test_db_connection"
+path = "test_db_connection.rs"
+
+[[bin]]
+name = "test_db_final"
+path = "test_db_final.rs"
+
+[[bin]]
+name = "test_auth_integration"
+path = "test_auth_integration.rs"

@@ -7,6 +7,10 @@ pub struct Config {
     pub server_addr: String,
     pub jwt_secret: String,
     pub jwt_expiration: u64,
+    pub supabase_url: String,
+    pub supabase_anon_key: String,
+    pub supabase_service_role_key: String,
+    pub redis_url: String,
 }
 
 impl Config {
@@ -22,6 +26,14 @@ impl Config {
                 .ok()
                 .and_then(|s| s.parse().ok())
                 .unwrap_or(86400), // 24 hours
+            supabase_url: env::var("SUPABASE_URL")
+                .unwrap_or_else(|_| "https://your-project.supabase.co".to_string()),
+            supabase_anon_key: env::var("SUPABASE_ANON_KEY")
+                .unwrap_or_else(|_| "your-anon-key".to_string()),
+            supabase_service_role_key: env::var("SUPABASE_SERVICE_ROLE_KEY")
+                .unwrap_or_else(|_| "your-service-role-key".to_string()),
+            redis_url: env::var("REDIS_URL")
+                .unwrap_or_else(|_| "redis://localhost:6379".to_string()),
         })
     }
 }

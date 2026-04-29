@@ -7,5 +7,4 @@ pub mod workspaces;
 pub mod channels;
 pub mod conversations;
 pub mod messages;
-pub mod websocket;
 pub mod api;

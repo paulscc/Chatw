@@ -182,7 +182,7 @@ impl WorkspaceService {
         let mut query = String::from("UPDATE workspace_members SET");
         let mut params = Vec::new();
         let mut param_count = 0;
-        let has_update = false;
+        let mut has_update = false;
 
         if let Some(role) = update.role {
             param_count += 1;

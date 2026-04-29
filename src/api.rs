@@ -1,6 +1,6 @@
 use actix_web::{web, HttpResponse, Scope};
 use uuid::Uuid;
-use actix::Addr;
+use serde::Deserialize;
 
 use crate::db::Database;
 use crate::error::AppError;
@@ -10,7 +10,6 @@ use crate::workspaces::WorkspaceService;
 use crate::channels::ChannelService;
 use crate::conversations::ConversationService;
 use crate::messages::MessageService;
-use crate::websocket::{ChatServer, websocket_route};
 
 // ============================================================================
 // API ROUTES CONFIGURATION
@@ -21,13 +20,12 @@ pub fn configure_routes(cfg: &mut web::ServiceConfig) {
         .service(
             web::scope("/api")
                 .service(health_check)
-                .service(profiles_routes)
-                .service(workspaces_routes)
-                .service(channels_routes)
-                .service(conversations_routes)
-                .service(messages_routes)
-        )
-        .service(websocket_route);
+                .service(profiles_routes())
+                .service(workspaces_routes())
+                .service(channels_routes())
+                .service(conversations_routes())
+                .service(messages_routes())
+        );
 }
 
 // ============================================================================

@@ -16,6 +16,17 @@ pub enum PresenceStatus {
     Offline,
 }
 
+impl std::fmt::Display for PresenceStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PresenceStatus::Online => write!(f, "online"),
+            PresenceStatus::Away => write!(f, "away"),
+            PresenceStatus::Busy => write!(f, "busy"),
+            PresenceStatus::Offline => write!(f, "offline"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type)]
 #[sqlx(type_name = "workspace_role", rename_all = "lowercase")]
 pub enum WorkspaceRole {
@@ -23,6 +34,17 @@ pub enum WorkspaceRole {
     Admin,
     Member,
     Guest,
+}
+
+impl std::fmt::Display for WorkspaceRole {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            WorkspaceRole::Owner => write!(f, "owner"),
+            WorkspaceRole::Admin => write!(f, "admin"),
+            WorkspaceRole::Member => write!(f, "member"),
+            WorkspaceRole::Guest => write!(f, "guest"),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type)]
@@ -59,7 +81,7 @@ pub enum MessageType {
     LinkPreview,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type, PartialEq)]
 #[sqlx(type_name = "invitation_status", rename_all = "lowercase")]
 pub enum InvitationStatus {
     Pending,
