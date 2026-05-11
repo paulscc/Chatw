@@ -1,42 +1,28 @@
-FROM rust:latest as builder
+# --- ETAPA DE CONSTRUCCIÓN ---
+FROM rust:1.75-slim-bookworm as builder
+
+# Instalar dependencias de compilación
+RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+COPY . .
 
-# Copy Cargo files first to leverage Docker layer caching
-COPY Cargo.toml ./
+# Usar el archivo sqlx-data.json para compilar sin DB activa
+ENV SQLX_OFFLINE=true
 
-# Create a dummy main.rs to build dependencies first
-RUN mkdir src && echo "fn main() {}" > src/main.rs
-RUN cargo build --release --quiet
-RUN rm -rf src
-
-# Copy the actual source code
-COPY src ./src
-COPY static ./static
-
-# Build the actual application
+# Compilar para release
 RUN cargo build --release
 
-# Runtime stage
-FROM debian:bullseye-slim
+# --- ETAPA DE EJECUCIÓN ---
+FROM debian:bookworm-slim
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    libssl1.1 \
-    pkg-config \
-    && rm -rf /var/lib/apt/lists/*
+# Instalar certificados SSL necesarios para conectar con Supabase y Upstash
+RUN apt-get update && apt-get install -y ca-certificates libssl-dev && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+COPY --from=builder /app/target/release/proyect-chat ./backend
+# Si tienes archivos estáticos (HTML/CSS/JS)
+COPY --from=builder /app/static ./static 
 
-# Copy the binary from builder stage
-COPY --from=builder /app/target/release/proyect-chat /app/proyect-chat
-
-# Copy static files
-COPY static ./static
-
-# Expose port
-EXPOSE 8080
-
-# Run the application
-CMD ["./proyect-chat"]
+# Render asigna el puerto dinámicamente mediante la variable PORT
+CMD ["./backend"]
