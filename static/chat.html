@@ -270,8 +270,12 @@ const maxReconnectAttempts = 5;
 
 // Obtener código de sala de la URL
 function getRoomCode() {
-    const pathParts = window.location.pathname.split('/');
-    return pathParts[pathParts.length - 1];
+    const urlParams = new URLSearchParams(window.location.search);
+    const roomCode = urlParams.get('room');
+    console.log('URL actual:', window.location.href);
+    console.log('URL params:', window.location.search);
+    console.log('RoomCode extraído:', roomCode);
+    return roomCode;
 }
 
 // Generar nombre de usuario aleatorio
@@ -293,7 +297,7 @@ function generateAvatar() {
 // Conectar a WebSocket
 function connectWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.host}/ws/${roomCode}`;
+    const wsUrl = `${protocol}//127.0.0.1:8087`;
     
     try {
         ws = new WebSocket(wsUrl);
@@ -302,14 +306,13 @@ function connectWebSocket() {
             console.log('Conectado al WebSocket');
             reconnectAttempts = 0;
             
-            // Enviar mensaje de unión
-            sendMessage({
+            // Enviar mensaje de unión a la sala
+            console.log('Uniéndose a la sala:', roomCode);
+            const joinMessage = {
                 type: 'join',
-                data: {
-                    roomCode: roomCode,
-                    user: currentUser
-                }
-            });
+                room_code: roomCode
+            };
+            ws.send(JSON.stringify(joinMessage));
         };
         
         ws.onmessage = function(event) {
@@ -340,32 +343,39 @@ function connectWebSocket() {
 
 // Manejar mensajes del WebSocket
 function handleWebSocketMessage(message) {
-    switch (message.type) {
-        case 'message':
+    console.log('Mensaje recibido del WebSocket:', message);
+    
+    // Sistema ultra-simple: procesar mensajes simples
+    if (message.type === 'message' && message.content) {
+        // Verificar que no sea nuestro propio mensaje
+        if (message.sender !== currentUser.id) {
+            console.log('Mostrando mensaje de otro usuario:', message.content);
+            displayMessage({
+                content: message.content,
+                sender_id: message.sender,
+                timestamp: message.timestamp,
+                isOwn: false
+            });
+            updateMessageCount();
+        }
+    } else if (message.data && message.data.content) {
+        // Formato antiguo compatible
+        if (message.data.sender_id !== currentUser.id) {
+            console.log('Mostrando mensaje (formato antiguo):', message.data.content);
             displayMessage(message.data);
             updateMessageCount();
-            break;
-        case 'user_joined':
-            displaySystemMessage(`${message.data.displayName} se unió a la sala`);
-            updateUserList(message.data.users);
-            break;
-        case 'user_left':
-            displaySystemMessage(`${message.data.displayName} abandonó la sala`);
-            updateUserList(message.data.users);
-            break;
-        case 'user_list':
-            updateUserList(message.data);
-            break;
-        case 'error':
-            showNotification(message.data.message, 'error');
-            break;
+        }
+    } else {
+        console.log('Mensaje no reconocido:', message);
     }
 }
 
 // Enviar mensaje por WebSocket
 function sendMessage(message) {
     if (ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify(message));
+        const messageString = JSON.stringify(message);
+        console.log('Enviando mensaje al WebSocket:', messageString);
+        ws.send(messageString);
     } else {
         console.error('WebSocket no está conectado');
     }
@@ -496,7 +506,8 @@ function showNotification(message, type = 'info') {
 document.addEventListener('DOMContentLoaded', function() {
     roomCode = getRoomCode();
     
-    if (!roomCode) {
+    if (!roomCode || roomCode === 'undefined' || roomCode === null) {
+        showNotification('Código de sala no encontrado. Redirigiendo...', 'error');
         window.location.href = '/';
         return;
     }
@@ -524,17 +535,25 @@ document.addEventListener('DOMContentLoaded', function() {
     function sendMessageToChat() {
         const content = messageInput.value.trim();
         if (content) {
-            sendMessage({
+            // Formato simplificado para el nuevo servidor
+            const message = {
                 type: 'message',
-                data: {
-                    content: content,
-                    roomCode: roomCode,
-                    senderId: currentUser.id,
-                    senderName: currentUser.displayName,
-                    senderAvatar: currentUser.avatar,
-                    timestamp: new Date().toISOString()
-                }
+                content: content,
+                room_code: roomCode,
+                sender: currentUser.id
+            };
+            
+            console.log('Enviando mensaje a canal Redis específico:', message);
+            sendMessage(message);
+            
+            // Mostrar el mensaje inmediatamente en el propio explorador
+            displayMessage({
+                content: content,
+                sender_id: currentUser.id,
+                timestamp: new Date().toISOString(),
+                isOwn: true
             });
+            
             messageInput.value = '';
         }
     }

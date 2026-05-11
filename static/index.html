@@ -257,7 +257,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function redirectToChat(roomCode) {
         const normalizedCode = roomCode.toUpperCase().trim();
         if (validateRoomCode(normalizedCode)) {
-            window.location.href = `/chat/${normalizedCode}`;
+            window.location.href = `chat.html?room=${normalizedCode}`;
         } else {
             showError('Código de sala inválido. Usa el formato: PALABRA-NÚMERO (ej: ALPHA-99)');
         }

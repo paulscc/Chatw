@@ -72,11 +72,11 @@ impl SupabaseClient {
     }
 
     // Auth endpoints
-    pub async fn sign_up(&self, email: &str, password: str) -> Result<AuthResponse, AppError> {
+    pub async fn sign_up(&self, email: &str, password: &str) -> Result<AuthResponse, AppError> {
         let headers = self.get_headers(false);
         let body = SignUpRequest {
             email: email.to_string(),
-            password,
+            password: password.to_string(),
             data: None,
         };
 
@@ -103,11 +103,11 @@ impl SupabaseClient {
         }
     }
 
-    pub async fn sign_in(&self, email: &str, password: str) -> Result<AuthResponse, AppError> {
+    pub async fn sign_in(&self, email: &str, password: &str) -> Result<AuthResponse, AppError> {
         let headers = self.get_headers(false);
         let body = SignInRequest {
             email: email.to_string(),
-            password,
+            password: password.to_string(),
         };
 
         let response = self.client

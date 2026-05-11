@@ -4,6 +4,7 @@ use crate::error::AppError;
 use crate::models::{Profile, CreateProfile, UpdateProfile, PresenceStatus};
 use uuid::Uuid;
 use chrono::Utc;
+use serde::{Serialize, Deserialize};
 use serde_json::{json, Value};
 use std::collections::HashMap;
 
@@ -53,10 +54,10 @@ impl SupabaseAuthService {
             user_metadata.insert("display_name".to_string(), json!(display_name));
         }
 
-        let auth_response = self.supabase.sign_up(&request.email, request.password).await?;
+        let auth_response = self.supabase.sign_up(&request.email, &request.password).await?;
 
         // Create profile in our database
-        let profile = self.create_or_update_profile_from_supabase_user(&auth_response.user, Some(&request.display_name)).await?;
+        let profile = self.create_or_update_profile_from_supabase_user(&auth_response.user, request.display_name.as_ref()).await?;
 
         Ok(AuthUserResponse {
             user: profile,
@@ -68,7 +69,7 @@ impl SupabaseAuthService {
 
     pub async fn sign_in(&self, request: SignInRequest) -> Result<AuthUserResponse, AppError> {
         // Sign in with Supabase Auth
-        let auth_response = self.supabase.sign_in(&request.email, request.password).await?;
+        let auth_response = self.supabase.sign_in(&request.email, &request.password).await?;
 
         // Get or create profile in our database
         let profile = self.create_or_update_profile_from_supabase_user(&auth_response.user, None).await?;

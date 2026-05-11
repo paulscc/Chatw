@@ -7,6 +7,8 @@ use uuid::Uuid;
 
 use crate::db::Database;
 use crate::models::PresenceStatus;
+use crate::redis_client::RedisClient;
+use crate::cache_service::CacheService;
 
 // ============================================================================
 // WEBSOCKET MESSAGE TYPES
@@ -33,7 +35,7 @@ pub enum WsMessage {
     Error { message: String },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Hash, Eq, PartialEq)]
 #[serde(tag = "target_type")]
 pub enum SubscribeTarget {
     #[serde(rename = "channel")]
@@ -52,11 +54,13 @@ pub struct MessageData {
     pub message_type: String,
     pub parent_id: Option<Uuid>,
     pub metadata: Option<serde_json::Value>,
+    pub room_code: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Message)]
+#[rtype(result = "()")]
 pub struct BroadcastMessage {
-    pub r#type: String,
+    pub message_type: String,
     pub data: serde_json::Value,
     pub timestamp: chrono::DateTime<chrono::Utc>,
 }
@@ -133,10 +137,16 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for WsSession {
             }
             Ok(ws::Message::Pong(_)) => {}
             Ok(ws::Message::Text(text)) => {
+                tracing::info!("Mensaje recibido: {}", text);
                 if let Ok(ws_msg) = serde_json::from_str::<WsMessage>(&text) {
+                    tracing::info!("Mensaje parseado correctamente: {:?}", ws_msg);
                     self.handle_ws_message(ws_msg, ctx);
                 } else {
-                    tracing::error!("Invalid WebSocket message format");
+                    tracing::error!("Invalid WebSocket message format. Mensaje: {}", text);
+                    // Intentar parsear como JSON genérico para ver la estructura
+                    if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&text) {
+                        tracing::error!("Estructura JSON: {}", serde_json::to_string_pretty(&json_value).unwrap_or_default());
+                    }
                 }
             }
             Ok(ws::Message::Close(reason)) => {
@@ -156,6 +166,8 @@ impl WsSession {
             }
             WsMessage::Subscribe { target } => {
                 self.subscriptions.insert(target.clone());
+                
+                // Enviar suscripción al ChatServer para que gestione los suscriptores
                 self.addr.send(Subscribe {
                     addr: ctx.address(),
                     profile_id: self.profile_id,
@@ -240,18 +252,77 @@ pub struct ChatServer {
     channel_subscribers: HashMap<Uuid, HashSet<Addr<WsSession>>>,
     conversation_subscribers: HashMap<Uuid, HashSet<Addr<WsSession>>>,
     workspace_subscribers: HashMap<Uuid, HashSet<Addr<WsSession>>>,
-    db: Database,
+    db: Option<Database>,
+    redis_client: RedisClient,
+    cache_service: CacheService,
+    addr: Addr<ChatServer>,
+    redis_subscriptions: HashMap<String, Addr<ChatServer>>, // room_code -> ChatServer addr
 }
 
 impl ChatServer {
-    pub fn new(db: Database) -> Self {
+    pub fn new(db: Database, redis_client: RedisClient, cache_service: CacheService, addr: Addr<ChatServer>) -> Self {
         ChatServer {
             sessions: HashMap::new(),
             channel_subscribers: HashMap::new(),
             conversation_subscribers: HashMap::new(),
             workspace_subscribers: HashMap::new(),
-            db,
+            db: Some(db),
+            redis_client,
+            cache_service,
+            addr,
+            redis_subscriptions: HashMap::new(),
         }
+    }
+    
+    pub fn new_no_db(redis_client: RedisClient, cache_service: CacheService, addr: Addr<ChatServer>) -> Self {
+        ChatServer {
+            sessions: HashMap::new(),
+            channel_subscribers: HashMap::new(),
+            conversation_subscribers: HashMap::new(),
+            workspace_subscribers: HashMap::new(),
+            db: None,
+            redis_client,
+            cache_service,
+            addr,
+            redis_subscriptions: HashMap::new(),
+        }
+    }
+
+    fn start_redis_subscription(&self, room_code: &str, ctx: &mut Context<Self>) {
+        let redis_client = self.redis_client.clone();
+        let addr = ctx.address();
+        let room_code = room_code.to_string();
+        
+        actix::spawn(async move {
+            // Suscribirse directamente al canal con el nombre de la sala
+            let redis_channel = room_code.clone(); // Usar directamente el nombre de sala
+            match redis_client.subscribe(&redis_channel).await {
+                Ok(mut pubsub) => {
+                    tracing::info!("Suscrito a Redis pub/sub channel: {}", redis_channel);
+                    
+                    // Escuchar mensajes de Redis
+                    while let Some(msg) = pubsub.next().await {
+                        match msg {
+                            Ok(redis_msg) => {
+                                tracing::info!("Mensaje recibido de Redis para sala {}: {}", room_code, redis_msg);
+                                
+                                // Parsear y reenviar a clientes WebSocket
+                                if let Ok(parsed_msg) = serde_json::from_str::<serde_json::Value>(&redis_msg) {
+                                    // Enviar mensaje al ChatServer para que lo distribuya
+                                    addr.do_send(RedisMessage { data: parsed_msg });
+                                }
+                            }
+                            Err(e) => {
+                                tracing::error!("Error recibiendo mensaje de Redis para sala {}: {}", room_code, e);
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    tracing::error!("Error suscribiéndose a Redis pub/sub para sala {}: {}", room_code, e);
+                }
+            }
+        });
     }
 
     fn broadcast_to_channel(&self, channel_id: Uuid, msg: BroadcastMessage) {
@@ -338,6 +409,12 @@ pub struct Typing {
     pub is_typing: bool,
 }
 
+#[derive(Message)]
+#[rtype(result = "()")]
+pub struct RedisMessage {
+    pub data: serde_json::Value,
+}
+
 // ============================================================================
 // CHAT SERVER HANDLERS
 // ============================================================================
@@ -375,6 +452,15 @@ impl Handler<Disconnect> for ChatServer {
             subscribers.remove(&msg.addr);
         }
 
+        // Remove from Redis cache when user disconnects
+        let profile_id_str = msg.profile_id.to_string();
+        let cache_service = self.cache_service.clone();
+        actix::spawn(async move {
+            if let Err(e) = cache_service.invalidate_profile_cache(&profile_id_str).await {
+                tracing::error!("Failed to invalidate profile cache: {}", e);
+            }
+        });
+
         tracing::info!("Profile {} disconnected", msg.profile_id);
     }
 }
@@ -387,17 +473,19 @@ impl Handler<Subscribe> for ChatServer {
             SubscribeTarget::Channel { id } => {
                 self.channel_subscribers.entry(id)
                     .or_insert_with(HashSet::new)
-                    .insert(msg.addr);
+                    .insert(msg.addr.clone());
+                
+                tracing::info!("Usuario {} suscrito al canal {}", msg.profile_id, id);
             }
             SubscribeTarget::Conversation { id } => {
                 self.conversation_subscribers.entry(id)
                     .or_insert_with(HashSet::new)
-                    .insert(msg.addr);
+                    .insert(msg.addr.clone());
             }
             SubscribeTarget::Workspace { id } => {
                 self.workspace_subscribers.entry(id)
                     .or_insert_with(HashSet::new)
-                    .insert(msg.addr);
+                    .insert(msg.addr.clone());
             }
         }
     }
@@ -440,53 +528,40 @@ impl Handler<NewMessage> for ChatServer {
     type Result = ();
 
     fn handle(&mut self, msg: NewMessage, ctx: &mut Self::Context) {
-        let db = self.db.clone();
+        // Sistema Redis-based de mensajería por sala
         let profile_id = msg.profile_id;
         let data = msg.data.clone();
 
-        async move {
-            use crate::messages::MessageService;
-            use crate::models::MessageType;
+        tracing::info!("Procesando mensaje de usuario {}: {}", profile_id, data.content);
 
-            let service = MessageService::new(db);
-            
-            let message_type = match data.message_type.as_str() {
-                "text" => MessageType::Text,
-                "image" => MessageType::Image,
-                "file" => MessageType::File,
-                "code" => MessageType::Code,
-                _ => MessageType::Text,
-            };
+        // Determinar el canal Redis usando directamente el nombre de sala
+        let room_code = data.room_code.as_ref().unwrap_or(&"global".to_string()).clone();
+        let redis_channel = room_code.clone(); // Usar directamente el nombre de sala como canal
 
-            let message = service.create_message(crate::models::CreateMessage {
-                channel_id: data.channel_id,
-                conversation_id: data.conversation_id,
-                sender_id: profile_id,
-                parent_id: data.parent_id,
-                content: Some(data.content),
-                r#type: message_type,
-                metadata: data.metadata,
-            }).await;
-
-            message
-        }
-        .into_actor(self)
-        .map(move |res, act, _ctx| {
-            if let Ok(message) = res {
-                let broadcast = BroadcastMessage {
-                    r#type: "message".to_string(),
-                    data: serde_json::to_value(&message).unwrap(),
-                    timestamp: chrono::Utc::now(),
-                };
-
-                if let Some(channel_id) = message.channel_id {
-                    act.broadcast_to_channel(channel_id, broadcast);
-                } else if let Some(conversation_id) = message.conversation_id {
-                    act.broadcast_to_conversation(conversation_id, broadcast);
-                }
+        // Crear mensaje para Redis pub/sub
+        let redis_message = serde_json::json!({
+            "type": "message",
+            "data": {
+                "id": Uuid::new_v4(),
+                "content": data.content,
+                "sender_id": profile_id,
+                "timestamp": chrono::Utc::now(),
+                "room_code": room_code
             }
-        })
-        .spawn(ctx);
+        });
+
+        tracing::info!("Publicando mensaje en canal Redis: {}", redis_channel);
+
+        // Publicar en Redis pub/sub específico de la sala
+        let redis_client = self.redis_client.clone();
+        actix::spawn(async move {
+            // Publicar en el canal específico de la sala
+            if let Err(e) = redis_client.publish(&redis_channel, &redis_message.to_string()).await {
+                tracing::error!("Error publicando mensaje en Redis canal {}: {}", redis_channel, e);
+            } else {
+                tracing::info!("Mensaje publicado exitosamente en canal: {}", redis_channel);
+            }
+        });
     }
 }
 
@@ -494,32 +569,26 @@ impl Handler<UpdatePresence> for ChatServer {
     type Result = ();
 
     fn handle(&mut self, msg: UpdatePresence, ctx: &mut Self::Context) {
-        let db = self.db.clone();
+        // Versión simplificada: Solo broadcast de presencia
         let profile_id = msg.profile_id;
         let status = msg.status;
 
-        async move {
-            use crate::auth::AuthService;
-            let service = AuthService::new(db);
-            service.update_presence(profile_id, status).await
-        }
-        .into_actor(self)
-        .map(|res, act, _ctx| {
-            if let Ok(profile) = res {
-                let broadcast = BroadcastMessage {
-                    r#type: "presence".to_string(),
-                    data: serde_json::to_value(&profile).unwrap(),
-                    timestamp: chrono::Utc::now(),
-                };
+        let broadcast = BroadcastMessage {
+            message_type: "presence".to_string(),
+            data: serde_json::json!({
+                "profile_id": profile_id,
+                "status": status,
+                "timestamp": chrono::Utc::now()
+            }),
+            timestamp: chrono::Utc::now(),
+        };
 
-                for subscribers in act.workspace_subscribers.values() {
-                    for addr in subscribers {
-                        addr.do_send(broadcast.clone());
-                    }
-                }
+        // Broadcast a todas las sesiones conectadas
+        for session in self.sessions.values() {
+            for addr in session {
+                addr.do_send(broadcast.clone());
             }
-        })
-        .spawn(ctx);
+        }
     }
 }
 
@@ -528,7 +597,7 @@ impl Handler<Typing> for ChatServer {
 
     fn handle(&mut self, msg: Typing, _ctx: &mut Self::Context) {
         let broadcast = BroadcastMessage {
-            r#type: "typing".to_string(),
+            message_type: "typing".to_string(),
             data: serde_json::json!({
                 "profile_id": msg.profile_id,
                 "is_typing": msg.is_typing,
@@ -549,9 +618,66 @@ impl Handler<Typing> for ChatServer {
     }
 }
 
+impl Handler<RedisMessage> for ChatServer {
+    type Result = ();
+
+    fn handle(&mut self, msg: RedisMessage, _ctx: &mut Self::Context) {
+        tracing::info!("Recibido mensaje de Redis, distribuyendo a {} sesiones", self.sessions.len());
+        
+        // Crear mensaje para broadcast
+        let broadcast = BroadcastMessage {
+            message_type: "message".to_string(),
+            data: msg.data,
+            timestamp: chrono::Utc::now(),
+        };
+
+        // Enviar a todas las sesiones conectadas
+        for session in self.sessions.values() {
+            for addr in session {
+                addr.do_send(broadcast.clone());
+            }
+        }
+
+        tracing::info!("Mensaje de Redis distribuido a todas las sesiones");
+    }
+}
+
 // ============================================================================
 // WEBSOCKET ROUTE
 // ============================================================================
+
+pub async fn index(
+    req: HttpRequest,
+    stream: web::Payload,
+    path: web::Path<String>,
+) -> Result<HttpResponse, actix_web::Error> {
+    let room_code = path.into_inner();
+    
+    tracing::info!("Iniciando conexión WebSocket para sala: {}", room_code);
+    
+    // Versión simplificada: Solo WebSocket básico sin dependencias complejas
+    let redis_client = match RedisClient::new("redis://localhost:6379").await {
+        Ok(client) => client,
+        Err(e) => {
+            tracing::error!("Error conectando a Redis: {}", e);
+            return Err(actix_web::error::ErrorInternalServerError("Error Redis"));
+        }
+    };
+    
+    let cache_service = CacheService::new(redis_client.clone());
+    
+    // Crear ChatServer sin Redis suscripción por ahora (versión simplificada)
+    let chat_server = ChatServer::new_no_db(redis_client, cache_service, Default::default());
+    let chat_server_addr = chat_server.start();
+    
+    // Iniciar suscripción al canal específico de la sala
+    // Nota: Esto debería hacerse en el started() del actor, pero por ahora lo dejamos así
+    tracing::info!("Debería suscribirse al canal Redis: {}", room_code);
+    
+    let ws_session = WsSession::new(chat_server_addr, Uuid::new_v4());
+    
+    ws::start(ws_session, &req, stream)
+}
 
 pub async fn websocket_route(
     req: HttpRequest,
@@ -566,6 +692,6 @@ pub async fn websocket_route(
     ws::start(ws_session, &req, stream)
 }
 
-pub async fn start_chat_server(db: Database) -> Addr<ChatServer> {
-    ChatServer::new(db).start()
+pub async fn start_chat_server(db: Database, redis_client: RedisClient, cache_service: CacheService) -> Addr<ChatServer> {
+    ChatServer::new(db, redis_client, cache_service).start()
 }

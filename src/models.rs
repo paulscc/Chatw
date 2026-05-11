@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 // ENUMS
 // ============================================================================
 
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, sqlx::Type)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, sqlx::Type)]
 #[sqlx(type_name = "presence_status", rename_all = "lowercase")]
 pub enum PresenceStatus {
     Online,
