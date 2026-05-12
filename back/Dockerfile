@@ -33,7 +33,7 @@ COPY migrations ./migrations
 COPY sqlx-data.json ./
 
 # Compilar aplicación completa
-RUN cargo build --release --frozen
+RUN cargo build --release
 
 # Limpiar para reducir tamaño
 RUN rm -rf /app/target/release/deps /app/target/release/build /app/target/release/*.rlib
