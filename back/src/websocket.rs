@@ -173,7 +173,7 @@ impl WsSession {
                     profile_id: self.profile_id,
                     target,
                 }).into_actor(self)
-                    .map(|res, _, ctx| {
+                    .map(|res, _, _ctx| {
                         if let Err(_) = res {
                             tracing::error!("Failed to subscribe");
                         }
@@ -527,7 +527,7 @@ impl Handler<Unsubscribe> for ChatServer {
 impl Handler<NewMessage> for ChatServer {
     type Result = ();
 
-    fn handle(&mut self, msg: NewMessage, ctx: &mut Self::Context) {
+    fn handle(&mut self, msg: NewMessage, _ctx: &mut Self::Context) {
         // Sistema Redis-based de mensajería por sala
         let profile_id = msg.profile_id;
         let data = msg.data.clone();
@@ -568,7 +568,7 @@ impl Handler<NewMessage> for ChatServer {
 impl Handler<UpdatePresence> for ChatServer {
     type Result = ();
 
-    fn handle(&mut self, msg: UpdatePresence, ctx: &mut Self::Context) {
+    fn handle(&mut self, msg: UpdatePresence, _ctx: &mut Self::Context) {
         // Versión simplificada: Solo broadcast de presencia
         let profile_id = msg.profile_id;
         let status = msg.status;
@@ -682,7 +682,7 @@ pub async fn index(
 pub async fn websocket_route(
     req: HttpRequest,
     stream: web::Payload,
-    db: web::Data<Database>,
+    _db: web::Data<Database>,
     chat_server: web::Data<Addr<ChatServer>>,
     profile_id: web::Path<Uuid>,
 ) -> Result<HttpResponse, actix_web::Error> {
