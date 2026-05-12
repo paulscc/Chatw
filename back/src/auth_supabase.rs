@@ -1,11 +1,11 @@
-use crate::supabase::{SupabaseClient, SupabaseUser, AuthResponse};
+use crate::supabase::{SupabaseClient, SupabaseUser};
 use crate::db::Database;
 use crate::error::AppError;
-use crate::models::{Profile, CreateProfile, UpdateProfile, PresenceStatus};
+use crate::models::{Profile, UpdateProfile, PresenceStatus};
 use uuid::Uuid;
 use chrono::Utc;
 use serde::{Serialize, Deserialize};
-use serde_json::{json, Value};
+use serde_json::json;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]

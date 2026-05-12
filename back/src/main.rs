@@ -19,11 +19,6 @@ mod websocket;
 use actix_web::{web, App, HttpServer, middleware};
 use actix_cors::Cors;
 use config::Config;
-use db::Database;
-use supabase::SupabaseClient;
-use auth_supabase::SupabaseAuthService;
-use redis_client::RedisClient;
-use cache_service::CacheService;
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {

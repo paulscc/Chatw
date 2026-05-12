@@ -301,7 +301,14 @@ impl ChatServer {
                     // Escuchar mensajes de Redis usando on_message
                     let mut pubsub_stream = pubsub.on_message();
                     while let Some(msg) = pubsub_stream.next().await {
-                        let redis_msg_str = String::from_utf8_lossy(&msg.get_payload());
+                        let payload = match msg.get_payload() {
+                            Ok(p) => p,
+                            Err(e) => {
+                                tracing::error!("Error getting payload from Redis message: {}", e);
+                                continue;
+                            }
+                        };
+                        let redis_msg_str = String::from_utf8_lossy(&payload);
                         tracing::info!("Mensaje recibido de Redis para sala {}: {}", room_code, redis_msg_str);
                         
                         // Parsear y reenviar a clientes WebSocket

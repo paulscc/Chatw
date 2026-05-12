@@ -1,4 +1,4 @@
-use redis::{Client, RedisError, RedisResult, AsyncCommands};
+use redis::{Client, RedisError, RedisResult};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone)]
