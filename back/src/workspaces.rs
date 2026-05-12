@@ -3,7 +3,7 @@ use crate::error::AppError;
 use crate::models::{
     Workspace, CreateWorkspace, UpdateWorkspace,
     WorkspaceMember, CreateWorkspaceMember, UpdateWorkspaceMember,
-    WorkspaceInvitation, CreateWorkspaceInvitation, InvitationStatus, WorkspaceRole
+    WorkspaceInvitation, CreateWorkspaceInvitation, InvitationStatus
 };
 use uuid::Uuid;
 use chrono::Utc;

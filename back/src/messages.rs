@@ -1,7 +1,7 @@
 use crate::db::Database;
 use crate::error::AppError;
 use crate::models::{
-    Message, CreateMessage, UpdateMessage, MessageType,
+    Message, CreateMessage, UpdateMessage,
     MessageVersion, MessageAttachment, CreateMessageAttachment,
     MessageReaction, CreateMessageReaction
 };
