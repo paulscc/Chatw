@@ -1,0 +1,11 @@
+services:
+  # Frontend Service
+  - type: web
+    name: proyectchat-frontend
+    runtime: node
+    repo: https://github.com/paulscc/Chatw
+    rootDir: front
+    buildCommand: echo "No build needed for static site"
+    startCommand: echo "Static site served by Render"
+    envVars: []
+    staticPublishPath: .

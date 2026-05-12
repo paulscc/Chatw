@@ -4,8 +4,8 @@
   "description": "Frontend para ProyectChat",
   "main": "index.html",
   "scripts": {
-    "start": "python -m http.server 3000",
-    "dev": "python -m http.server 3000"
+    "build": "echo 'No build needed for static site'",
+    "start": "echo 'Static site - no server needed'"
   },
   "dependencies": {},
   "devDependencies": {},
