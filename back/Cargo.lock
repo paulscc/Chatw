@@ -2098,6 +2098,7 @@ dependencies = [
  "chrono",
  "dotenv",
  "env_logger",
+ "futures",
  "home",
  "jsonwebtoken",
  "lazy_static",

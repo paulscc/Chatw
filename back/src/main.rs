@@ -24,7 +24,6 @@ use supabase::SupabaseClient;
 use auth_supabase::SupabaseAuthService;
 use redis_client::RedisClient;
 use cache_service::CacheService;
-use websocket::start_chat_server;
 
 #[actix_web::main]
 async fn main() -> anyhow::Result<()> {
