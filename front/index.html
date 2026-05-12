@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProyectChat - Chat Empresarial</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 h-screen">
+    <div class="flex h-full">
+        <!-- Sidebar -->
+        <div class="w-64 bg-gray-800 text-white p-4">
+            <div class="mb-8">
+                <h1 class="text-2xl font-bold flex items-center">
+                    <i class="fas fa-comments mr-2"></i>
+                    ProyectChat
+                </h1>
+            </div>
+            
+            <div class="space-y-2">
+                <div class="bg-gray-700 rounded-lg p-3">
+                    <div class="flex items-center">
+                        <img src="https://picsum.photos/seed/user1/40/40.jpg" class="w-10 h-10 rounded-full mr-3">
+                        <div>
+                            <div class="font-semibold">Tu Nombre</div>
+                            <div class="text-xs text-gray-400">En línea</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <h3 class="text-xs uppercase text-gray-500 mb-2">Canales</h3>
+                    <div class="space-y-1">
+                        <div class="hover:bg-gray-700 rounded p-2 cursor-pointer">
+                            <i class="fas fa-hashtag mr-2"></i> general
+                        </div>
+                        <div class="hover:bg-gray-700 rounded p-2 cursor-pointer">
+                            <i class="fas fa-hashtag mr-2"></i> random
+                        </div>
+                        <div class="hover:bg-gray-700 rounded p-2 cursor-pointer">
+                            <i class="fas fa-hashtag mr-2"></i> desarrollo
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <h3 class="text-xs uppercase text-gray-500 mb-2">Mensajes Directos</h3>
+                    <div class="space-y-1">
+                        <div class="hover:bg-gray-700 rounded p-2 cursor-pointer">
+                            <img src="https://picsum.photos/seed/user2/24/24.jpg" class="w-6 h-6 rounded-full inline mr-2">
+                            Ana García
+                        </div>
+                        <div class="hover:bg-gray-700 rounded p-2 cursor-pointer">
+                            <img src="https://picsum.photos/seed/user3/24/24.jpg" class="w-6 h-6 rounded-full inline mr-2">
+                            Carlos López
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Main Chat Area -->
+        <div class="flex-1 flex flex-col">
+            <!-- Header -->
+            <div class="bg-white border-b p-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-xl font-semibold"># general</h2>
+                        <p class="text-sm text-gray-500">Canal principal del equipo</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        <button class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-cog"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Messages Area -->
+            <div class="flex-1 overflow-y-auto p-4 space-y-4" id="messages">
+                <div class="flex items-start">
+                    <img src="https://picsum.photos/seed/user2/40/40.jpg" class="w-10 h-10 rounded-full mr-3">
+                    <div>
+                        <div class="flex items-baseline">
+                            <span class="font-semibold mr-2">Ana García</span>
+                            <span class="text-xs text-gray-500">10:30 AM</span>
+                        </div>
+                        <div class="bg-white rounded-lg p-3 mt-1">
+                            ¡Hola equipo! ¿Cómo están todos?
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-start">
+                    <img src="https://picsum.photos/seed/user3/40/40.jpg" class="w-10 h-10 rounded-full mr-3">
+                    <div>
+                        <div class="flex items-baseline">
+                            <span class="font-semibold mr-2">Carlos López</span>
+                            <span class="text-xs text-gray-500">10:32 AM</span>
+                        </div>
+                        <div class="bg-white rounded-lg p-3 mt-1">
+                            ¡Muy bien! Trabajando en el nuevo proyecto 🚀
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-start">
+                    <img src="https://picsum.photos/seed/user1/40/40.jpg" class="w-10 h-10 rounded-full mr-3">
+                    <div>
+                        <div class="flex items-baseline">
+                            <span class="font-semibold mr-2">Tú</span>
+                            <span class="text-xs text-gray-500">10:35 AM</span>
+                        </div>
+                        <div class="bg-blue-500 text-white rounded-lg p-3 mt-1">
+                            Excelente! ¿Necesitan ayuda con algo?
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Message Input -->
+            <div class="bg-white border-t p-4">
+                <div class="flex items-center">
+                    <input 
+                        type="text" 
+                        id="messageInput"
+                        placeholder="Escribe un mensaje..." 
+                        class="flex-1 border rounded-lg px-4 py-2 mr-2 focus:outline-none focus:border-blue-500"
+                    >
+                    <button 
+                        id="sendButton"
+                        class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600"
+                    >
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Configuración WebSocket
+        const ws = new WebSocket('ws://localhost:8080/ws/user123');
+        
+        ws.onopen = function(event) {
+            console.log('Conectado al servidor WebSocket');
+        };
+        
+        ws.onmessage = function(event) {
+            const message = JSON.parse(event.data);
+            console.log('Mensaje recibido:', message);
+            
+            if (message.type === 'message') {
+                addMessageToChat(message.data);
+            }
+        };
+        
+        ws.onerror = function(error) {
+            console.error('Error WebSocket:', error);
+        };
+        
+        ws.onclose = function(event) {
+            console.log('Conexión WebSocket cerrada');
+        };
+        
+        // Función para agregar mensajes al chat
+        function addMessageToChat(messageData) {
+            const messagesContainer = document.getElementById('messages');
+            const messageElement = document.createElement('div');
+            messageElement.className = 'flex items-start';
+            messageElement.innerHTML = `
+                <img src="https://picsum.photos/seed/${messageData.profile_id}/40/40.jpg" class="w-10 h-10 rounded-full mr-3">
+                <div>
+                    <div class="flex items-baseline">
+                        <span class="font-semibold mr-2">${messageData.profile_name || 'Usuario'}</span>
+                        <span class="text-xs text-gray-500">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <div class="bg-white rounded-lg p-3 mt-1">
+                        ${messageData.content}
+                    </div>
+                </div>
+            `;
+            messagesContainer.appendChild(messageElement);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        // Enviar mensaje
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (message && ws.readyState === WebSocket.OPEN) {
+                const messageData = {
+                    type: 'message',
+                    data: {
+                        channel_id: 'channel123',
+                        content: message,
+                        message_type: 'text'
+                    }
+                };
+                
+                ws.send(JSON.stringify(messageData));
+                messageInput.value = '';
+            }
+        }
+        
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        
+        // Suscribirse a canal
+        ws.addEventListener('open', function() {
+            const subscribeMessage = {
+                type: 'subscribe',
+                target: {
+                    target_type: 'channel',
+                    id: 'channel123'
+                }
+            };
+            ws.send(JSON.stringify(subscribeMessage));
+        });
+    </script>
+</body>
+</html>

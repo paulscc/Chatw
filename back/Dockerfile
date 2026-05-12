@@ -21,8 +21,13 @@ RUN apt-get update && apt-get install -y ca-certificates libssl-dev && rm -rf /v
 
 WORKDIR /app
 COPY --from=builder /app/target/release/proyect-chat ./backend
-# Si tienes archivos estáticos (HTML/CSS/JS)
-COPY --from=builder /app/static ./static 
 
-# Render asigna el puerto dinámicamente mediante la variable PORT
+# Exponer puerto (Render usa la variable PORT automáticamente)
+EXPOSE 8080
+
+# Configurar variables de entorno por defecto
+ENV PORT=8080
+ENV SERVER_ADDRESS=0.0.0.0:8080
+
+# Iniciar el servidor
 CMD ["./backend"]

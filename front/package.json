@@ -1,0 +1,15 @@
+{
+  "name": "proyectchat-frontend",
+  "version": "1.0.0",
+  "description": "Frontend para ProyectChat",
+  "main": "index.html",
+  "scripts": {
+    "start": "python -m http.server 3000",
+    "dev": "python -m http.server 3000"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "keywords": ["chat", "websocket", "frontend"],
+  "author": "ProyectChat Team",
+  "license": "MIT"
+}
