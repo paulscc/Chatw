@@ -32,7 +32,7 @@ impl Config {
             supabase_service_role_key: env::var("SUPABASE_SERVICE_ROLE_KEY")
                 .unwrap_or_else(|_| "your-service-role-key".to_string()),
             redis_url: env::var("REDIS_URL")
-                .unwrap_or_else(|_| "redis://localhost:6379".to_string()),
+                .expect("REDIS_URL must be set (Upstash Redis URL)"),
         })
     }
 }

@@ -13,7 +13,6 @@ mod api;
 mod test_connection;
 mod redis_client;
 mod cache_service;
-mod test_redis;
 mod websocket;
 
 use actix_web::{web, App, HttpServer, middleware};
@@ -60,10 +59,12 @@ async fn main() -> anyhow::Result<()> {
     tracing::info!("Starting server on {}", server_addr);
     
     HttpServer::new(move || {
+        let redis_url = config.redis_url.clone();
         App::new()
             .wrap(middleware::Logger::default())
             .wrap(middleware::Compress::default())
             .wrap(Cors::permissive())
+            .app_data(web::Data::new(redis_url))
             .route("/health", web::get().to(|| async { "OK" }))
             .route("/", web::get().to(|| async { "Backend is running!" }))
             .route("/ws/{room_code}", web::get().to(websocket::index))

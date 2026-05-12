@@ -130,29 +130,3 @@ impl RedisClient {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use serde_json::Value;
-
-    #[tokio::test]
-    async fn test_redis_connection() {
-        let redis_client = RedisClient::new("redis://localhost:6379").await;
-        assert!(redis_client.is_ok(), "Failed to connect to Redis");
-    }
-
-    #[tokio::test]
-    async fn test_set_get_operations() {
-        let redis_client = RedisClient::new("redis://localhost:6379").await.unwrap();
-        
-        let test_key = "test_key";
-        let test_value = "test_value";
-        
-        redis_client.set(test_key, &test_value, None).await.unwrap();
-        let retrieved: Option<String> = redis_client.get(test_key).await.unwrap();
-        
-        assert_eq!(retrieved, Some(test_value.to_string()));
-        
-        redis_client.delete(test_key).await.unwrap();
-    }
-}

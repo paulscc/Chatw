@@ -1,10 +1,14 @@
 # --- ETAPA DE CONSTRUCCIÓN ---
-FROM rust:latest as builder
+FROM rust:1.75-slim as builder
 
-# Instalar dependencias de compilación
+# Instalar dependencias de compilación mínimas
 RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
+
+# Limitar jobs paralelos para reducir uso de RAM
+ENV CARGO_BUILD_JOBS=2
+ENV CARGO_NET_RETRY=10
 
 # Copiar Cargo.toml primero para cache
 COPY Cargo.toml Cargo.lock ./
@@ -15,9 +19,8 @@ RUN mkdir src && echo "fn main() {}" > src/main.rs
 # Usar el archivo sqlx-data.json para compilar sin DB activa
 ENV SQLX_OFFLINE=true
 
-# Construir dependencias primero
-RUN cargo build --release
-RUN rm -rf src
+# Construir dependencias primero con flags optimizados
+RUN cargo build --release --frozen && rm -rf src
 
 # Copiar código fuente real
 COPY src ./src
@@ -25,7 +28,10 @@ COPY migrations ./migrations
 COPY sqlx-data.json ./
 
 # Compilar aplicación completa
-RUN cargo build --release
+RUN cargo build --release --frozen
+
+# Limpiar para reducir tamaño
+RUN rm -rf /app/target/release/deps /app/target/release/build /app/target/release/*.rlib
 
 # --- ETAPA DE EJECUCIÓN ---
 FROM debian:bookworm-slim

@@ -301,7 +301,7 @@ impl ChatServer {
                     // Escuchar mensajes de Redis usando on_message
                     let mut pubsub_stream = pubsub.on_message();
                     while let Some(msg) = pubsub_stream.next().await {
-                        let payload = match msg.get_payload() {
+                        let payload: Vec<u8> = match msg.get_payload() {
                             Ok(p) => p,
                             Err(e) => {
                                 tracing::error!("Error getting payload from Redis message: {}", e);
@@ -650,13 +650,14 @@ pub async fn index(
     req: HttpRequest,
     stream: web::Payload,
     path: web::Path<String>,
+    redis_url: web::Data<String>,
 ) -> Result<HttpResponse, actix_web::Error> {
     let room_code = path.into_inner();
     
     tracing::info!("Iniciando conexión WebSocket para sala: {}", room_code);
     
-    // Versión simplificada: Solo WebSocket básico sin dependencias complejas
-    let redis_client = match RedisClient::new("redis://localhost:6379").await {
+    // Usar Upstash Redis desde variable de entorno
+    let redis_client = match RedisClient::new(&redis_url).await {
         Ok(client) => client,
         Err(e) => {
             tracing::error!("Error conectando a Redis: {}", e);
