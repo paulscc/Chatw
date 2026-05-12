@@ -301,10 +301,10 @@ impl ChatServer {
                     tracing::info!("Suscrito a Redis pub/sub channel: {}", redis_channel);
                     
                     // Escuchar mensajes de Redis
-                    while let Some(msg) = pubsub.recv().await {
-                        match msg {
+                    while let Some(msg_result) = pubsub.recv().await {
+                        match msg_result {
                             Ok(redis_msg) => {
-                                let redis_msg_str = String::from_utf8_lossy(&redis_msg);
+                                let redis_msg_str = String::from_utf8_lossy(&redis_msg.get_payload());
                                 tracing::info!("Mensaje recibido de Redis para sala {}: {}", room_code, redis_msg_str);
                                 
                                 // Parsear y reenviar a clientes WebSocket
@@ -315,6 +315,7 @@ impl ChatServer {
                             }
                             Err(e) => {
                                 tracing::error!("Error recibiendo mensaje de Redis para sala {}: {}", room_code, e);
+                                break;
                             }
                         }
                     }
@@ -668,7 +669,7 @@ pub async fn index(
     let cache_service = CacheService::new(redis_client.clone());
     
     // Crear ChatServer sin Redis suscripción por ahora (versión simplificada)
-    let chat_server = ChatServer::new_no_db(redis_client, cache_service, chat_server_addr.clone());
+    let chat_server = ChatServer::new_no_db(redis_client.clone(), cache_service.clone(), Default::default());
     let chat_server_addr = chat_server.start();
     
     // Iniciar suscripción al canal específico de la sala
