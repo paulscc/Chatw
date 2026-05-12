@@ -301,13 +301,14 @@ impl ChatServer {
                     tracing::info!("Suscrito a Redis pub/sub channel: {}", redis_channel);
                     
                     // Escuchar mensajes de Redis
-                    while let Some(msg_result) = pubsub.next().await {
-                        match msg_result {
+                    while let Some(msg) = pubsub.recv().await {
+                        match msg {
                             Ok(redis_msg) => {
-                                tracing::info!("Mensaje recibido de Redis para sala {}: {}", room_code, &redis_msg);
+                                let redis_msg_str = String::from_utf8_lossy(&redis_msg);
+                                tracing::info!("Mensaje recibido de Redis para sala {}: {}", room_code, redis_msg_str);
                                 
                                 // Parsear y reenviar a clientes WebSocket
-                                if let Ok(parsed_msg) = serde_json::from_str::<serde_json::Value>(&redis_msg) {
+                                if let Ok(parsed_msg) = serde_json::from_str::<serde_json::Value>(&redis_msg_str) {
                                     // Enviar mensaje al ChatServer para que lo distribuya
                                     addr.do_send(RedisMessage { data: parsed_msg });
                                 }
@@ -667,7 +668,7 @@ pub async fn index(
     let cache_service = CacheService::new(redis_client.clone());
     
     // Crear ChatServer sin Redis suscripción por ahora (versión simplificada)
-    let chat_server = ChatServer::new_no_db(redis_client, cache_service, Default::default());
+    let chat_server = ChatServer::new_no_db(redis_client, cache_service, chat_server_addr.clone());
     let chat_server_addr = chat_server.start();
     
     // Iniciar suscripción al canal específico de la sala
@@ -693,5 +694,6 @@ pub async fn websocket_route(
 }
 
 pub async fn start_chat_server(db: Database, redis_client: RedisClient, cache_service: CacheService) -> Addr<ChatServer> {
-    ChatServer::new(db, redis_client, cache_service).start()
+    let server = ChatServer::new(db, redis_client, cache_service, Default::default());
+    server.start()
 }
