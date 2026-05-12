@@ -1,5 +1,5 @@
 # --- ETAPA DE CONSTRUCCIÓN ---
-FROM rust:latest as builder
+FROM rust:1.81-bookworm as builder
 
 # Instalar dependencias de compilación mínimas
 RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
