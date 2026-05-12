@@ -187,7 +187,7 @@ impl WsSession {
                     profile_id: self.profile_id,
                     target,
                 }).into_actor(self)
-                    .map(|res, _, ctx| {
+                    .map(|res, _, _ctx| {
                         if let Err(_) = res {
                             tracing::error!("Failed to unsubscribe");
                         }
@@ -199,7 +199,7 @@ impl WsSession {
                     profile_id: self.profile_id,
                     data,
                 }).into_actor(self)
-                    .map(|res, _, ctx| {
+                    .map(|res, _, _ctx| {
                         if let Err(_) = res {
                             tracing::error!("Failed to send message");
                         }
@@ -211,7 +211,7 @@ impl WsSession {
                     profile_id: self.profile_id,
                     status,
                 }).into_actor(self)
-                    .map(|res, _, ctx| {
+                    .map(|res, _, _ctx| {
                         if let Err(_) = res {
                             tracing::error!("Failed to update presence");
                         }
@@ -223,7 +223,7 @@ impl WsSession {
                     profile_id: self.profile_id,
                     is_typing,
                 }).into_actor(self)
-                    .map(|res, _, ctx| {
+                    .map(|res, _, _ctx| {
                         if let Err(_) = res {
                             tracing::error!("Failed to send typing status");
                         }
