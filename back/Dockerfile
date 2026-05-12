@@ -22,8 +22,8 @@ RUN mkdir src && echo "fn main() {}" > src/main.rs
 # Usar el archivo sqlx-data.json para compilar sin DB activa
 ENV SQLX_OFFLINE=true
 
-# Construir dependencias primero con flags optimizados
-RUN cargo build --release --frozen && rm -rf src
+# Construir dependencias primero
+RUN cargo build --release && rm -rf src
 
 # Copiar código fuente real
 # Cache bust: force rebuild when source changes
