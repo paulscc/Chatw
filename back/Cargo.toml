@@ -58,6 +58,9 @@ async-trait = "0.1"
 # Redis
 redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
 
+# Fixed version for home crate to avoid edition2024
+home = "=0.5.9"
+
 [[bin]]
 name = "test_supabase"
 path = "bins/test_supabase.rs"
