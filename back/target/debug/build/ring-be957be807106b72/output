@@ -69,19 +69,19 @@ gfp_p384.c
 p256.c
 limbs.c
 mem.c
+exit code: 0
+exit code: 0
+exit code: 0
+exit code: 0
+exit code: 0
+exit code: 0
+exit code: 0
+exit code: 0
+exit code: 0
 poly1305.c
 crypto.c
 cpu_intel.c
 curve25519_64_adx.c
-exit code: 0
-exit code: 0
-exit code: 0
-exit code: 0
-exit code: 0
-exit code: 0
-exit code: 0
-exit code: 0
-exit code: 0
 p256-nistz.c
 exit code: 0
 exit code: 0

@@ -62,26 +62,26 @@ CFLAGS_x86_64-pc-windows-msvc = None
 curve25519.c
 aes_nohw.c
 montgomery.c
+montgomery_inv.c
+ecp_nistz.c
 gfp_p256.c
 gfp_p384.c
-ecp_nistz.c
-montgomery_inv.c
 p256.c
 limbs.c
-poly1305.c
 mem.c
+exit code: 0
+exit code: 0
+exit code: 0
+exit code: 0
+exit code: 0
+exit code: 0
+exit code: 0
+exit code: 0
+exit code: 0
+poly1305.c
 crypto.c
 cpu_intel.c
 curve25519_64_adx.c
-exit code: 0
-exit code: 0
-exit code: 0
-exit code: 0
-exit code: 0
-exit code: 0
-exit code: 0
-exit code: 0
-exit code: 0
 p256-nistz.c
 exit code: 0
 exit code: 0

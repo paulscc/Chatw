@@ -122,7 +122,7 @@ impl RedisClient {
         Ok(result)
     }
 
-    pub async fn subscribe(&self, channel: &str) -> RedisResult<redis::PubSub> {
+    pub async fn subscribe(&self, channel: &str) -> RedisResult<redis::aio::PubSub> {
         let conn = self.client.get_async_connection().await?;
         let mut pubsub = conn.into_pubsub();
         pubsub.subscribe(channel).await?;

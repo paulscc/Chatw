@@ -4,6 +4,7 @@ use actix_web_actors::ws;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use uuid::Uuid;
+use futures::StreamExt;
 
 use crate::db::Database;
 use crate::models::PresenceStatus;
@@ -255,12 +256,11 @@ pub struct ChatServer {
     db: Option<Database>,
     redis_client: RedisClient,
     cache_service: CacheService,
-    addr: Addr<ChatServer>,
     redis_subscriptions: HashMap<String, Addr<ChatServer>>, // room_code -> ChatServer addr
 }
 
 impl ChatServer {
-    pub fn new(db: Database, redis_client: RedisClient, cache_service: CacheService, addr: Addr<ChatServer>) -> Self {
+    pub fn new(db: Database, redis_client: RedisClient, cache_service: CacheService) -> Self {
         ChatServer {
             sessions: HashMap::new(),
             channel_subscribers: HashMap::new(),
@@ -269,12 +269,11 @@ impl ChatServer {
             db: Some(db),
             redis_client,
             cache_service,
-            addr,
             redis_subscriptions: HashMap::new(),
         }
     }
     
-    pub fn new_no_db(redis_client: RedisClient, cache_service: CacheService, addr: Addr<ChatServer>) -> Self {
+    pub fn new_no_db(redis_client: RedisClient, cache_service: CacheService) -> Self {
         ChatServer {
             sessions: HashMap::new(),
             channel_subscribers: HashMap::new(),
@@ -283,7 +282,6 @@ impl ChatServer {
             db: None,
             redis_client,
             cache_service,
-            addr,
             redis_subscriptions: HashMap::new(),
         }
     }
@@ -300,23 +298,16 @@ impl ChatServer {
                 Ok(mut pubsub) => {
                     tracing::info!("Suscrito a Redis pub/sub channel: {}", redis_channel);
                     
-                    // Escuchar mensajes de Redis
-                    while let Some(msg_result) = pubsub.recv().await {
-                        match msg_result {
-                            Ok(redis_msg) => {
-                                let redis_msg_str = String::from_utf8_lossy(&redis_msg.get_payload());
-                                tracing::info!("Mensaje recibido de Redis para sala {}: {}", room_code, redis_msg_str);
-                                
-                                // Parsear y reenviar a clientes WebSocket
-                                if let Ok(parsed_msg) = serde_json::from_str::<serde_json::Value>(&redis_msg_str) {
-                                    // Enviar mensaje al ChatServer para que lo distribuya
-                                    addr.do_send(RedisMessage { data: parsed_msg });
-                                }
-                            }
-                            Err(e) => {
-                                tracing::error!("Error recibiendo mensaje de Redis para sala {}: {}", room_code, e);
-                                break;
-                            }
+                    // Escuchar mensajes de Redis usando on_message
+                    let mut pubsub_stream = pubsub.on_message();
+                    while let Some(msg) = pubsub_stream.next().await {
+                        let redis_msg_str = String::from_utf8_lossy(&msg.get_payload());
+                        tracing::info!("Mensaje recibido de Redis para sala {}: {}", room_code, redis_msg_str);
+                        
+                        // Parsear y reenviar a clientes WebSocket
+                        if let Ok(parsed_msg) = serde_json::from_str::<serde_json::Value>(&redis_msg_str) {
+                            // Enviar mensaje al ChatServer para que lo distribuya
+                            addr.do_send(RedisMessage { data: parsed_msg });
                         }
                     }
                 }
@@ -669,7 +660,7 @@ pub async fn index(
     let cache_service = CacheService::new(redis_client.clone());
     
     // Crear ChatServer sin Redis suscripción por ahora (versión simplificada)
-    let chat_server = ChatServer::new_no_db(redis_client.clone(), cache_service.clone(), Default::default());
+    let chat_server = ChatServer::new_no_db(redis_client.clone(), cache_service.clone());
     let chat_server_addr = chat_server.start();
     
     // Iniciar suscripción al canal específico de la sala
@@ -695,6 +686,6 @@ pub async fn websocket_route(
 }
 
 pub async fn start_chat_server(db: Database, redis_client: RedisClient, cache_service: CacheService) -> Addr<ChatServer> {
-    let server = ChatServer::new(db, redis_client, cache_service, Default::default());
+    let server = ChatServer::new(db, redis_client, cache_service);
     server.start()
 }
