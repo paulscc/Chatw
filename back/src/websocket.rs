@@ -120,7 +120,7 @@ impl Actor for WsSession {
             addr: ctx.address(),
             profile_id: self.profile_id,
         }).into_actor(self)
-            .map(|res, _, ctx| {
+            .map(|res, _, _ctx| {
                 if let Err(_) = res {
                     tracing::error!("Failed to disconnect");
                 }
@@ -304,7 +304,7 @@ impl ChatServer {
                     while let Some(msg_result) = pubsub.next().await {
                         match msg_result {
                             Ok(redis_msg) => {
-                                tracing::info!("Mensaje recibido de Redis para sala {}: {}", room_code, redis_msg);
+                                tracing::info!("Mensaje recibido de Redis para sala {}: {}", room_code, &redis_msg);
                                 
                                 // Parsear y reenviar a clientes WebSocket
                                 if let Ok(parsed_msg) = serde_json::from_str::<serde_json::Value>(&redis_msg) {
