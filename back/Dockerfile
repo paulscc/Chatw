@@ -6,6 +6,9 @@ RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/li
 
 WORKDIR /app
 
+# Forzar reconstrucción invalidando caché
+ARG CACHEBUST=1
+
 # Limitar jobs paralelos para reducir uso de RAM
 ENV CARGO_BUILD_JOBS=2
 ENV CARGO_NET_RETRY=10
@@ -23,6 +26,7 @@ ENV SQLX_OFFLINE=true
 RUN cargo build --release --frozen && rm -rf src
 
 # Copiar código fuente real
+# Cache bust: force rebuild when source changes
 COPY src ./src
 COPY migrations ./migrations
 COPY sqlx-data.json ./
