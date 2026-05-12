@@ -1,16 +1,30 @@
 # --- ETAPA DE CONSTRUCCIÓN ---
-FROM rust:1.75-slim-bookworm as builder
+FROM rust:1.80-slim-bookworm as builder
 
 # Instalar dependencias de compilación
 RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY . .
+
+# Copiar Cargo.toml primero para cache
+COPY Cargo.toml Cargo.lock ./
+
+# Crear dummy src para cache de dependencias
+RUN mkdir src && echo "fn main() {}" > src/main.rs
 
 # Usar el archivo sqlx-data.json para compilar sin DB activa
 ENV SQLX_OFFLINE=true
 
-# Compilar para release
+# Construir dependencias primero
+RUN cargo build --release
+RUN rm -rf src
+
+# Copiar código fuente real
+COPY src ./src
+COPY migrations ./migrations
+COPY sqlx-data.json ./
+
+# Compilar aplicación completa
 RUN cargo build --release
 
 # --- ETAPA DE EJECUCIÓN ---
