@@ -93,7 +93,7 @@ impl Actor for WsSession {
             addr: ctx.address(),
             profile_id: self.profile_id,
         }).into_actor(self)
-            .map(|res, act, ctx| {
+            .map(|res, _act, ctx| {
                 if let Err(_) = res {
                     ctx.stop();
                 }
@@ -108,7 +108,7 @@ impl Actor for WsSession {
                 profile_id: self.profile_id,
                 target: target.clone(),
             }).into_actor(self)
-                .map(|res, _, ctx| {
+                .map(|res, _, _ctx| {
                     if let Err(_) = res {
                         tracing::error!("Failed to unsubscribe");
                     }
@@ -301,8 +301,8 @@ impl ChatServer {
                     tracing::info!("Suscrito a Redis pub/sub channel: {}", redis_channel);
                     
                     // Escuchar mensajes de Redis
-                    while let Some(msg) = pubsub.next().await {
-                        match msg {
+                    while let Some(msg_result) = pubsub.next().await {
+                        match msg_result {
                             Ok(redis_msg) => {
                                 tracing::info!("Mensaje recibido de Redis para sala {}: {}", room_code, redis_msg);
                                 
