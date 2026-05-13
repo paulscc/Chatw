@@ -296,7 +296,7 @@ function generateAvatar() {
 
 // Conectar a WebSocket
 function connectWebSocket() {
-    const wsUrl = 'wss://chatwserv.onrender.com/ws';
+    const wsUrl = `wss://chatwserv.onrender.com/ws/${currentUser.id}`;
     
     try {
         ws = new WebSocket(wsUrl);
@@ -408,9 +408,10 @@ function displayMessage(messageData) {
         `;
     } else {
         messageDiv.className = 'flex items-end gap-3 max-w-[85%] md:max-w-[70%]';
+        const senderAvatar = messageData.senderAvatar || generateAvatar();
         messageDiv.innerHTML = `
             <div class="w-8 h-8 rounded-full overflow-hidden flex-shrink-0 mb-1 shadow-sm">
-                <img alt="${messageData.senderName}" class="w-full h-full object-cover" src="${messageData.senderAvatar}">
+                <img alt="${messageData.senderName}" class="w-full h-full object-cover" src="${senderAvatar}">
             </div>
             <div class="space-y-1">
                 <span class="text-label-sm text-slate-500 ml-1">${messageData.senderName} • ${formatTime(messageData.timestamp)}</span>
