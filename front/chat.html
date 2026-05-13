@@ -296,7 +296,9 @@ function generateAvatar() {
 
 // Conectar a WebSocket
 function connectWebSocket() {
-    const wsUrl = `wss://chatwserv.onrender.com/ws/${currentUser.id}`;
+    // El backend Rust usa /ws/{room_code}
+    const wsUrl = `wss://chatwserv.onrender.com/ws/${roomCode}`;
+    console.log('Intentando conectar a:', wsUrl);
     
     try {
         ws = new WebSocket(wsUrl);
