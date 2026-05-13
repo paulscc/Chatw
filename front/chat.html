@@ -296,8 +296,7 @@ function generateAvatar() {
 
 // Conectar a WebSocket
 function connectWebSocket() {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//127.0.0.1:8086`;
+    const wsUrl = 'wss://chatwserv.onrender.com/ws';
     
     try {
         ws = new WebSocket(wsUrl);
